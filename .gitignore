@@ -1,0 +1,6 @@
+esp-homekit-rgbic-strip.xcodeproj/
+build/
+firmware/
+src/.DS_Store
+.DS_Store
+src/latest-pre-release
