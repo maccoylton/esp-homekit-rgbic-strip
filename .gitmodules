@@ -19,3 +19,6 @@
 [submodule "components/esp-wifi-config"]
 	path = components/esp-wifi-config
 	url = https://github.com/maximkulkin/esp-wifi-config
+[submodule "components/WS2812FX-rtos"]
+	path = components/WS2812FX-rtos
+	url = https://github.com/pcsaito/WS2812FX-rtos.git
