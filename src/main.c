@@ -28,7 +28,7 @@
  */
 
 #define DEVICE_MANUFACTURER "maccoylton"
-#define DEVICE_NAME "Power Monitor"
+#define DEVICE_NAME "RGBIC LED STRIP"
 #define DEVICE_MODEL "1"
 #define DEVICE_SERIAL "123456780"
 #define FW_VERSION "1.0"
@@ -158,8 +158,8 @@ void rgbic_led_saturation_set(homekit_value_t value) {
 }
 
 void rgbic_eeffect_set (homekit_value_t value) {
-    if (value.format != homekit_format_int) {
-        printf("Invalid effect-value format: %d\n", value.format);
+    if (value.format != homekit_format_uint8) {
+        printf("%s: Invalid effect-value format: %d\n", __func__, value.format);
         return;
     }
     rgbic_mode = value.int_value;
@@ -206,7 +206,7 @@ void gpio_init() {
 
 
 homekit_accessory_t *accessories[] = {
-    HOMEKIT_ACCESSORY(.id=1, .category=homekit_accessory_category_sensor, .services=(homekit_service_t*[]){
+    HOMEKIT_ACCESSORY(.id=1, .category=homekit_accessory_category_lightbulb, .services=(homekit_service_t*[]){
         HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics=(homekit_characteristic_t*[]){
             &name,
             &manufacturer,
@@ -218,12 +218,22 @@ homekit_accessory_t *accessories[] = {
         }),
         
         
-        HOMEKIT_SERVICE(SWITCH, .primary=true, .characteristics=(homekit_characteristic_t*[]){
+        HOMEKIT_SERVICE(LIGHTBULB, .primary=true, .characteristics=(homekit_characteristic_t*[]){
             HOMEKIT_CHARACTERISTIC(NAME, "Switch"),
-
+            &on,
+            &saturation,
+            &hue,
+            &brightness,
+            &rgbic_effect,
+            &ota_trigger,
+            &wifi_reset,
+            &ota_beta,
+            &lcm_beta,
+            &task_stats,
+            &wifi_check_interval,
             NULL
         }),
-
+        
         
         NULL
     }),
