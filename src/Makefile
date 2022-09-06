@@ -6,6 +6,7 @@ EXTRA_COMPONENTS = \
 	extras/rboot-ota \
 	extras/i2s_dma \
     extras/ws2812_i2s \
+    extras/ws2812 \
 	$(abspath ../components/esp-wolfssl) \
 	$(abspath ../components/esp-cjson) \
 	$(abspath ../components/esp-homekit) \
@@ -17,7 +18,8 @@ EXTRA_COMPONENTS = \
 	$(abspath ../components/esp-homekit-common-functions/ota)\
 	$(abspath ../components/esp-homekit-common-functions/custom_characteristics)\
 	$(abspath ../components/esp-homekit-common-functions/shared_functions)\
-    $(abspath ../components/esp-homekit-common-functions/colour_conversion)
+    $(abspath ../components/esp-homekit-common-functions/colour_conversion)\
+    $(abspath ../components/esp-rtos-ws2812)
 
 
 
