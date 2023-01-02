@@ -68,7 +68,7 @@
 #include <ota-api.h>
 
 #define SAVE_DELAY 2000
-#define LED_COUNT 60            // this is the number of WS2812B leds on the strip
+#define LED_COUNT 180                    // this is the number of WS2812B leds on the strip
 #define LED_SCALE_FACTOR 2.55            // this is the number of WS2812B leds on the strip
 #define LED_STRIP_GPIO 2
 
@@ -81,10 +81,9 @@ float led_hue = 0;              // hue is scaled 0 to 360
 float led_saturation = 59;      // saturation is scaled 0 to 100
 float led_brightness = 100;     // brightness is scaled 0 to 100
 bool led_on = false;            // on is boolean on or off
-uint8_t rgbic_mode=0;         // used for the effect on the lights
+uint8_t rgbic_mode=0;          // used for the effect on the lights
 uint8_t rgbic_mode_speed=1;
 
-uint32_t pixels_rgb[LED_COUNT];
 
 
 void rgbic_effect_set (homekit_value_t value);
@@ -97,9 +96,11 @@ homekit_value_t rgbic_led_brightness_get();
 void rgbic_led_brightness_set(homekit_value_t value);
 homekit_value_t rgbic_led_on_get ();
 void rgbic_led_on_set (homekit_value_t value);
+void colours_test_set (homekit_value_t value);
+void rgbic_led_count_set (homekit_value_t value);
+
+
 TaskHandle_t timing_test_task_handle = NULL;
-
-
 
 
 homekit_characteristic_t wifi_check_interval   = HOMEKIT_CHARACTERISTIC_(CUSTOM_WIFI_CHECK_INTERVAL, 10, .setter=wifi_check_interval_set);
@@ -135,6 +136,27 @@ homekit_characteristic_t saturation = HOMEKIT_CHARACTERISTIC_(SATURATION, 0,
 
 homekit_characteristic_t rgbic_effect = HOMEKIT_CHARACTERISTIC_(CUSTOM_RGBIC_EFFECT, 0 , .setter=rgbic_effect_set);
 homekit_characteristic_t rgbic_effect_speed = HOMEKIT_CHARACTERISTIC_(CUSTOM_RGBIC_EFFECT_SPEED, 1 , .setter=rgbic_effect_speed_set);
+homekit_characteristic_t rgbic_led_count = HOMEKIT_CHARACTERISTIC_(CUSTOM_RGBIC_LED_COUNT, 480 , .setter=rgbic_led_count_set);
+homekit_characteristic_t colours_test   = HOMEKIT_CHARACTERISTIC_(CUSTOM_COLOURS_GPIO_TEST, false , .setter=colours_test_set);
+
+ETSTimer resize_strip_timer;
+
+
+
+
+void timing_test_task(){
+    
+    uint32_t rainbow[]={0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF};
+    uint32_t blackout[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    
+    while (true){
+        esp_ws2812_send_pixels(4,rainbow,LED_COUNT);
+        vTaskDelay((3000) / portTICK_PERIOD_MS);
+        esp_ws2812_send_pixels(4,blackout,LED_COUNT);
+        vTaskDelay((3000) / portTICK_PERIOD_MS);
+    }
+}
+
 
 
 void gpio_init() {
@@ -153,8 +175,10 @@ void rgbic_led_on_set (homekit_value_t value) {
     if (led_on) {
         WS2812FX_start();
     } else {
+        WS2812_clear();
         WS2812FX_stop();
     }
+    sdk_os_timer_arm (&save_timer, SAVE_DELAY, 0 );
 }
 
 
@@ -173,6 +197,8 @@ void rgbic_led_brightness_set(homekit_value_t value) {
     
     printf ("B=%f\n", led_brightness);
     WS2812FX_setBrightness((uint8_t)floor(led_brightness*LED_SCALE_FACTOR));
+    sdk_os_timer_arm (&save_timer, SAVE_DELAY, 0 );
+
 }
 
 
@@ -200,6 +226,8 @@ void rgbic_led_hue_set(homekit_value_t value) {
     printf ("H=%f, S=%f, B=%f, R=%d, G=%d, B=%d\n", led_hue, led_saturation, led_brightness, rgb.red, rgb.green, rgb.blue);
     
     WS2812FX_setColor(rgb.red, rgb.green, rgb.blue);
+    sdk_os_timer_arm (&save_timer, SAVE_DELAY, 0 );
+
 }
 
 
@@ -222,6 +250,8 @@ void rgbic_led_saturation_set(homekit_value_t value) {
     printf ("H=%f, S=%f, B=%f, R=%d, G=%d, B=%d\n", led_hue, led_saturation, led_brightness, rgb.red, rgb.green, rgb.blue);
     
     WS2812FX_setColor(rgb.red, rgb.green, rgb.blue);
+    sdk_os_timer_arm (&save_timer, SAVE_DELAY, 0 );
+
 }
 
 void rgbic_effect_set (homekit_value_t value) {
@@ -232,6 +262,8 @@ void rgbic_effect_set (homekit_value_t value) {
     rgbic_effect.value.int_value = value.int_value;
     rgbic_mode = value.int_value;
     WS2812FX_setMode(rgbic_mode);
+    sdk_os_timer_arm (&save_timer, SAVE_DELAY, 0 );
+
 }
 
 void rgbic_effect_speed_set (homekit_value_t value) {
@@ -242,6 +274,49 @@ void rgbic_effect_speed_set (homekit_value_t value) {
     rgbic_mode_speed = value.int_value;
     rgbic_effect_speed.value.int_value = value.int_value;
     WS2812FX_setSpeed(rgbic_mode_speed);
+    sdk_os_timer_arm (&save_timer, SAVE_DELAY, 0 );
+
+}
+
+
+void resize_strip ( ){
+    
+    printf("%s: To: %d\n", __func__, rgbic_led_count.value.int_value);
+    //WS2812FX_resize (rgbic_led_count.value.int_value);
+    save_characteristics();
+    sdk_system_restart();
+    printf("%s: End\n", __func__);
+
+
+}
+
+
+void rgbic_led_count_set (homekit_value_t value) {
+    if (value.format != homekit_format_uint16) {
+        printf("%s: Invalid led count value: %d\n", __func__, value.format);
+        return;
+    }
+    rgbic_led_count.value.int_value = value.int_value;
+
+    sdk_os_timer_arm (&resize_strip_timer, SAVE_DELAY-50, 0 );
+    sdk_os_timer_arm (&save_timer, SAVE_DELAY, 0 );
+    
+}
+
+
+void colours_test_set (homekit_value_t value)
+{
+    
+    if ( value.bool_value) {
+        vTaskSuspend(fx_service_task_handle);
+        xTaskCreate(timing_test_task, "timing_test_task", 512 , NULL, tskIDLE_PRIORITY+1, &timing_test_task_handle);
+    }  else {
+        if (timing_test_task_handle != NULL) {
+            vTaskDelete (timing_test_task_handle);
+        }
+        vTaskResume (fx_service_task_handle);
+    }
+    
 }
 
 homekit_accessory_t *accessories[] = {
@@ -265,12 +340,15 @@ homekit_accessory_t *accessories[] = {
             &brightness,
             &rgbic_effect,
             &rgbic_effect_speed,
+            &rgbic_led_count,
             &ota_trigger,
             &wifi_reset,
             &ota_beta,
             &lcm_beta,
             &task_stats,
             &wifi_check_interval,
+            &preserve_state,
+            &colours_test,
             NULL
         }),
         
@@ -302,7 +380,20 @@ void recover_from_reset (int reason){
 void save_characteristics ( ){
     
     printf ("%s:\n", __func__);
-    save_characteristic_to_flash(&wifi_check_interval, wifi_check_interval.value);
+    save_characteristic_to_flash(&preserve_state, preserve_state.value);
+    if ( preserve_state.value.bool_value == true){
+        printf ("%s:Preserving state\n", __func__);
+        save_characteristic_to_flash(&on, on.value);
+        save_characteristic_to_flash(&saturation, saturation.value);
+        save_characteristic_to_flash(&hue, hue.value);
+        save_characteristic_to_flash(&brightness, brightness.value);
+        save_characteristic_to_flash(&rgbic_effect, rgbic_effect.value);
+        save_characteristic_to_flash(&rgbic_effect_speed, rgbic_effect_speed.value);
+        save_characteristic_to_flash(&wifi_check_interval, wifi_check_interval.value);
+        save_characteristic_to_flash(&rgbic_led_count, rgbic_led_count.value);
+    } else {
+        printf ("%s:Not preserving state\n", __func__);
+    }
 }
 
 
@@ -310,31 +401,43 @@ void accessory_init_not_paired (void) {
     /* initalise anything you don't want started until wifi and homekit imitialisation is confirmed, but not paired */
     
 }
-
-
-
-void timing_test_task(){
- 
-    uint32_t rainbow[]={0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FF00, 0x0000FF};
-    uint32_t blackout[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     
-    while (true){
-        esp_ws2812_send_pixels(4,rainbow,LED_COUNT);
-        vTaskDelay((10000) / portTICK_PERIOD_MS);
-        esp_ws2812_send_pixels(4,blackout,LED_COUNT);
-        vTaskDelay((10000) / portTICK_PERIOD_MS);
-    }
-}
-
 
 void accessory_init (void ){
     /* initalise anything you don't want started until wifi and pairing is confirmed */
     
-    load_characteristic_from_flash(&wifi_check_interval);
+    if ( preserve_state.value.bool_value == true){
+        printf ("%s:Loading preserved state\n", __func__);
+        load_characteristic_from_flash(&on);
+        load_characteristic_from_flash(&saturation);
+        load_characteristic_from_flash(&hue);
+        load_characteristic_from_flash(&brightness);
+        load_characteristic_from_flash(&rgbic_effect);
+        load_characteristic_from_flash(&rgbic_effect_speed);
+        load_characteristic_from_flash(&rgbic_led_count);
+    } else {
+        printf ("%s:Preserved state is off\n", __func__);
+    }
+    homekit_characteristic_notify(&preserve_state, preserve_state.value);
+    homekit_characteristic_notify(&wifi_check_interval, wifi_check_interval.value);
+    homekit_characteristic_notify(&on, on.value);
+    homekit_characteristic_notify(&saturation, saturation.value);
+    homekit_characteristic_notify(&hue, hue.value);
+    homekit_characteristic_notify(&brightness, brightness.value);
+    homekit_characteristic_notify(&rgbic_effect, rgbic_effect.value);
+    homekit_characteristic_notify(&rgbic_effect_speed, rgbic_effect_speed.value);
     
-//    xTaskCreate(timing_test_task, "timing_test_task", 512 , NULL, tskIDLE_PRIORITY+1, &timing_test_task_handle);
+    rgbic_led_saturation_set (saturation.value);
+    rgbic_led_hue_set (hue.value);
+    rgbic_led_brightness_set (brightness.value);
+    rgbic_effect_set (rgbic_effect.value);
+    rgbic_effect_speed_set (rgbic_effect_speed.value);
+    rgbic_led_on_set (on.value);
     
-    WS2812FX_init_non_i2s(pixels_rgb, LED_COUNT, LED_STRIP_GPIO);
+    sdk_os_timer_setfn(&resize_strip_timer, resize_strip, NULL);
+
+    
+    WS2812FX_init_non_i2s( rgbic_led_count.value.int_value, LED_STRIP_GPIO);
 
     
 
