@@ -22,6 +22,3 @@
 [submodule "components/WS2812FX-rtos"]
 	path = components/WS2812FX-rtos
 	url = https://github.com/pcsaito/WS2812FX-rtos.git
-[submodule "esp-rtos-ws2812"]
-	path = esp-rtos-ws2812
-	url = https://github.com/maccoylton/esp-rtos-ws2812
