@@ -1,3 +1,5 @@
+![GitHub All Releases](https://img.shields.io/github/downloads/maccoylton/esp-homekit-rgbic-strip/total) 
+![GitHub Releases](https://img.shields.io/github/downloads/maccoylton/esp-homekit-rgbic-strip/latest/total)
 # esp-homekit-rgbic-strip
 ESP homekit firmare for RGBIC strips
 
