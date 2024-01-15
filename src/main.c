@@ -42,8 +42,7 @@
 #include <esp8266.h>
 #include <FreeRTOS.h>
 #include <task.h>
-#include <math.h>
-
+#include <timers.h>
 
 #include <homekit/homekit.h>
 #include <homekit/characteristics.h>
@@ -69,7 +68,7 @@
 
 #define SAVE_DELAY 2000
 #define LED_COUNT 180                    // this is the number of WS2812B leds on the strip
-#define LED_SCALE_FACTOR 2.55            // this is the number of WS2812B leds on the strip
+#define LED_SCALE_FACTOR 2.54            // this is the number of WS2812B leds on the strip
 #define LED_STRIP_GPIO 2
 
 int led_off_value=-1; /* global varibale to support LEDs set to 0 where the LED is connected to GND, 1 where +3.3v */
@@ -309,7 +308,7 @@ void colours_test_set (homekit_value_t value)
     
     if ( value.bool_value) {
         vTaskSuspend(fx_service_task_handle);
-        xTaskCreate(timing_test_task, "timing_test_task", 512 , NULL, tskIDLE_PRIORITY+1, &timing_test_task_handle);
+        xTaskCreate(timing_test_task, "timing_test_task", 512 , NULL, tskIDLE_PRIORITY+2, &timing_test_task_handle);
     }  else {
         if (timing_test_task_handle != NULL) {
             vTaskDelete (timing_test_task_handle);
